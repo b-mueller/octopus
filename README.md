@@ -20,7 +20,7 @@ The purpose of Octopus is to provide an easy way to analyze smart contract secur
 - **Control Flow Analysis**: Octopus can generate a Control Flow Graph (CFG) 
 - **Call Flow Analysis**: Octopus can generate a Call Flow Graph (function level) 
 - **IR conversion (SSA)**: Octopus can simplify assembly into Static Single Assignment (SSA) representation
-- **Symbolic Execution**: Octopus can use symbolic execution to find new paths into a program
+- **Symbolic Execution**: Octopus use symbolic execution to find new paths into a program
 
 ## Platforms / Architectures
 
@@ -44,8 +44,8 @@ Octopus support the following types of programs/smart contracts:
 
 
 * PyPI package :heavy_check_mark:
-* IDA plugin :heavy_plus_sign:
-* Binary ninja plugin :heavy_plus_sign:
+* IDA plugin :heavy_multiplication_x:
+* Binary ninja plugin :heavy_multiplication_x:
 
 :heavy_check_mark: **DONE** / :heavy_plus_sign: **WIP** / :heavy_multiplication_x: **TODO** / :o: **N/A**
 
@@ -74,8 +74,8 @@ sudo apt-get update && sudo apt-get install python-pip graphviz -y
 git clone https://github.com/quoscient/octopus
 cd octopus
 
-# Install Octopus and its dependencies
-pip3 install -r requirements.txt
+# Install Octopus library/CLI and its dependencies
+python3 setup.py install
 ```
 or
 ```
@@ -96,7 +96,13 @@ cd octopus/tests/
 ./wasm_run_tests.sh
 ```
 
-## Examples
+## Command-line tools
+
+* WebAssembly: [octopus_wasm.py](octopus_wasm.py)
+* Ethereum (EVM): [octopus_eth_evm.py](octopus_eth_evm.py)
+
+
+## In-depth Examples using APIs
 
 <details><summary>WebAssembly</summary>
 <p>
@@ -760,7 +766,50 @@ graph.view_functions()
 #### Explorer
 
 ```python
-# TODO
+from octopus.platforms.EOS.explorer import EosExplorer
+
+host = "api.cypherglass.com"
+
+# by defaul the port is 8888
+explo = EosExplorer(host=host)
+
+# get info about the node
+explo.get_info()
+
+'''
+{'block_cpu_limit': 180289,
+ 'block_net_limit': 1045680,
+ 'chain_id': 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
+ 'head_block_id': '018d6e2bcf6295126cd74cf694b5cca3529eefc42b334b394ef87c3a43876739',
+ 'head_block_num': 26045995,
+ 'head_block_producer': 'eosswedenorg',
+ 'head_block_time': '2018-11-09T14:11:29.500',
+ 'last_irreversible_block_id': '018d6cdcff78bbd9f25c605b02fb67c47a337ece78ddcf73089cee4bf6a410ee',
+ 'last_irreversible_block_num': 26045660,
+ 'server_version': 'c71d2245',
+ 'server_version_string': 'mainnet-1.3.0',
+ 'virtual_block_cpu_limit': 38092879,
+ 'virtual_block_net_limit': 1048576000}
+'''
+explo.get_block(1337)
+
+'''
+{'action_mroot': 'bcb9763baa3bbf98ed36379b4be0ecb2d9cd21c75df01729c63b2b021001c10c',
+ 'block_extensions': [],
+ 'block_num': 1337,
+ 'confirmed': 0,
+ 'header_extensions': [],
+ 'id': '00000539d17a03af7126e073be4c4d99a72b7f58793cf2c87b9bfd41b6c711fb',
+ 'new_producers': None,
+ 'previous': '00000538b374c1cbfaeed7253ad3075ddc72a28f0a0515301fc1bbed675f2316',
+ 'producer': 'eosio',
+ 'producer_signature': 'SIG_K1_K5jWf36t6j454Hb2fGuV37YTwMTvuQ51ZPBtpru8Ud2axtMTEauWyvtpJuTpnvqzReUndDgEDXvoeEP4jdj2bpnYKBt6g2',
+ 'ref_block_prefix': 1944069745,
+ 'schedule_version': 0,
+ 'timestamp': '2018-06-09T12:09:21.500',
+ 'transaction_mroot': '0000000000000000000000000000000000000000000000000000000000000000',
+ 'transactions': []}
+'''
 ```
 
 #### Disassembler
@@ -914,7 +963,21 @@ cfg.visualize_instrs_per_funcs()
 #### Explorer
 
 ```python
-# TODO
+from octopus.platforms.BTC.explorer import BitcoinExplorerRPC
+
+RPC_USER = 'test'
+RPC_PASSWORD = 'test'
+RPC_HOST = 'localhost'
+
+host = '%s:%s@%s' % (RPC_USER, RPC_PASSWORD, RPC_HOST)
+
+explorer = BitcoinExplorerRPC(host)
+
+explorer.getbestblockhash()
+# '00000000000000000012085cfe8c79bcdacf81fbd82f6ab52c3cb3a454d4987c'
+
+explorer.getblockcount()
+#550859
 ```
 
 #### Disassembler
@@ -952,6 +1015,7 @@ Please find examples in [examples](examples) folder.
 ## Publications and Videos
 
 * BLACKALPS 2018 [Reversing and Vulnerability research of Ethereum Smart Contracts](https://www.blackalps.ch/ba-18/talks.php#111)
+* Devcon iv. [Reversing Ethereum Smart Contracts to find out what's behind EVM bytecode](https://guidebook.com/guide/117233/event/21956134/)
 * hack.lu 2018 [Reversing and Vulnerability research of Ethereum Smart Contracts](https://2018.hack.lu/talks/#Reversing+and+Vulnerability+research+of+Ethereum+Smart+Contracts)
 * ToorCon XX - 2018 [Reversing Ethereum Smart Contracts (Introduction)](https://frab.toorcon.net/en/toorcon20/public/events/97)
 * ToorCon XX - 2018 [Dissection of WebAssembly module](https://frab.toorcon.net/en/toorcon20/public/events/92)
@@ -959,7 +1023,7 @@ Please find examples in [examples](examples) folder.
 
 ## Authors
 
-* **Patrick Ventuzelo** - *Creator* - [@Pat_Ventuzelo](https://twitter.com/pat_ventuzelo)
+**Patrick Ventuzelo** - *Creator* - [@Pat_Ventuzelo](https://twitter.com/pat_ventuzelo)
 
 See also the list of [contributors](https://github.com/quoscient/octopus/contributors) who participated in this project.
 
@@ -972,4 +1036,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Inspired by:
 * [Manticore](https://github.com/trailofbits/manticore)
 * [Mythril](https://github.com/ConsenSys/mythril)
+* [Rattle](https://github.com/trailofbits/rattle)
+* [ethersplay](https://github.com/trailofbits/ethersplay)
 * ...

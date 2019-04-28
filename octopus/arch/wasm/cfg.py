@@ -1,21 +1,26 @@
-from octopus.core.function import Function
+# for graph visualisation
+
+from logging import getLogger
+from graphviz import Digraph
+
+from octopus.analysis.cfg import CFG
+from octopus.analysis.graph import CFGGraph
+
+from octopus.arch.wasm.analyzer import WasmModuleAnalyzer
+from octopus.arch.wasm.disassembler import WasmDisassembler
+from octopus.arch.wasm.format import (format_bb_name,
+                                      format_func_name)
+from octopus.arch.wasm.wasm import _groups
+
 from octopus.core.basicblock import BasicBlock
 from octopus.core.edge import (Edge,
                                EDGE_UNCONDITIONAL,
                                EDGE_CONDITIONAL_TRUE, EDGE_CONDITIONAL_FALSE,
                                EDGE_FALLTHROUGH, EDGE_CALL)
-from octopus.analysis.cfg import CFG
-from octopus.analysis.graph import CFGGraph
-from octopus.arch.wasm.analyzer import WasmModuleAnalyzer
-from octopus.arch.wasm.disassembler import WasmDisassembler
-from octopus.arch.wasm.format import (format_func_name,
-                                      format_bb_name)
-
-from octopus.arch.wasm.wasm import _groups
+from octopus.core.function import Function
 from octopus.core.utils import bytecode_to_bytes
-# for graph visualisation
-from graphviz import Digraph
-from logging import getLogger
+
+
 logging = getLogger(__name__)
 
 
@@ -44,11 +49,26 @@ def enum_func(module_bytecode):
 
         prefered_name = format_func_name(name, param_str, return_str)
         instructions = WasmDisassembler().disassemble(code)
-        cur_function = Function(0, instructions[0], name=name, prefered_name=prefered_name)
+        cur_function = Function(0, instructions[0], name=name,
+                                prefered_name=prefered_name)
         cur_function.instructions = instructions
 
         functions.append(cur_function)
     return functions
+
+
+def enum_func_name_call_indirect(functions):
+    ''' return a list of function name if they used call_indirect
+    '''
+    func_name = list()
+
+    # iterate over functions
+    for func in functions:
+        for inst in func.instructions:
+            if inst.name == "call_indirect":
+                func_name.append(func.name)
+    func_name = list(set(func_name))
+    return func_name
 
 
 def enum_func_call_edges(functions, len_imports):
@@ -67,7 +87,12 @@ def enum_func_call_edges(functions, len_imports):
                 logging.info('%s', inst.operand_interpretation)
                 #if inst.name == "call":
                 # only get the import_id
-                node_to = int(inst.operand_interpretation.split(' ')[1])
+                import_id = inst.operand_interpretation.split(' ')[1]
+                if import_id.startswith('0x'):
+                    import_id = int(import_id, 16)
+                else:
+                    import_id = int(import_id)
+                node_to = int(import_id)
                 # The `call_indirect` operator takes a list of function arguments and as the last operand the index into the table.
                 #elif inst.name == "call_indirect":
                 # the last operand is the index on the table
@@ -360,6 +385,8 @@ class WasmCFG(CFG):
 
             export_list = [p[0] for p in self.analyzer.func_prototypes if p[3] == 'export']
             import_list = [p[0] for p in self.analyzer.func_prototypes if p[3] == 'import']
+            call_indirect_list = enum_func_name_call_indirect(self.functions)
+
             try:
                 indirect_target = [self.analyzer.func_prototypes[index][0] for index in self.analyzer.elements[0].get('elems')]
             except IndexError:
@@ -388,10 +415,14 @@ class WasmCFG(CFG):
                     shape = DESIGN_EXPORT.get('shape')
                     style = DESIGN_EXPORT.get('style')
                     c.node(node_name, fillcolor=fillcolor, shape=shape, style=style)
-                elif node in indirect_target:
+
+                if node in indirect_target:
                     logging.debug('indirect_target ' + node)
                     shape = "hexagon"
 
+                if node in call_indirect_list:
+                    logging.debug('contain call_indirect ' + node)
+                    style = "dashed"
                 c.node(node_name, fillcolor=fillcolor, shape=shape, style=style)
 
             # check if multiple same edges
